@@ -12,6 +12,7 @@ class MotorIo {
   void StopWheels(bool brake);
   void TestRun();
   void TurnLeft();
+  void SaveData();
 
   int32_t counts_l_;
   int32_t counts_r_;
@@ -24,18 +25,23 @@ class MotorIo {
   void ResetCounts();
 
   /////////////////lowpass/////////////////
-  void LowPass(int* counts_l_, int* counts_r_);
+  void LowPass();
   float Ad[2][2] = {{1.044 ,-0.5447},{0.5, 0}};
-  float Bd[1][2] = {{0.5}, {0}};
+  float Bd[2][1] = {{0.5}, {0}};
   float Cd[2] = {0.3479, 0.1663};
   float Dd = 0.05715;
-  float x_k_l[1][2] = {};
-  float x_k_r[1][2] = {};
-  float x_kn_l[1][2] = {};
-  float x_kn_r[1][2] = {};
+  float x_k_l[2][1] = {};
+  float x_k_r[2][1] = {};
+  float x_kn_l[2][1] = {};
+  float x_kn_r[2][1] = {};
   float y_k_l = 0;
   float y_k_r = 0;
   /////////////////lowpass/////////////////
+  /////////////////save data/////////////////
+  int now_angle[2][100000] = {};
+  float lowpass_angle[2][100000] = {};
+  int index = 0;
+  /////////////////save data/////////////////
 };
 
 class SensorIo {

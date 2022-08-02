@@ -84,6 +84,8 @@ void main_task(intptr_t unused) {
     tslp_tsk(100*1000U);
   }
 
+  motor_io->SaveData();
+  basic_driver->SavePidData();
   stp_cyc(EXEC_ACTION_CYC);
   stp_cyc(UPDATE_INFO_CYC);
   finalize();

@@ -1,4 +1,5 @@
 #include "device_io.h"
+#include <stdio.h>
 
 MotorIo::MotorIo() : counts_l_(0), counts_r_(0) {
   ev3_motor_config(EV3_PORT_A, LARGE_MOTOR);
@@ -17,8 +18,16 @@ void MotorIo::Update() {
   power_l_ = static_cast<int8_t>(ev3_motor_get_power(EV3_PORT_C));
   power_r_ = static_cast<int8_t>(ev3_motor_get_power(EV3_PORT_B));
   /////////////////lowpass/////////////////
-  LowPass(&counts_l_, &counts_r_);
+  LowPass();
   /////////////////lowpass/////////////////
+  
+  /////////////////save data/////////////////
+  now_angle[0][index] = counts_l_;
+  now_angle[1][index] = counts_r_;
+  lowpass_angle[0][index] = counts_lowpassed_l_;
+  lowpass_angle[1][index] = counts_lowpassed_r_;
+  index ++;
+  /////////////////save data/////////////////
 }
 
 void MotorIo::SetWheelsPower(int8_t power_l, int8_t power_r) {
@@ -64,17 +73,49 @@ void MotorIo::TestRun() {
 }
 
 /////////////////lowpass/////////////////
-void MotorIo::LowPass(int* counts_l_, int* counts_r_){
-  x_k_l = x_kn_l;
-  x_k_r = x_kn_r;
-  x_kn[0][0] = Ad[0][0] * x_k_l[0][0] + Ad[0][1] * x_k_l[0][1] + Bd[0][0] * counts_l_;
-  x_kn[0][0] = Ad[0][0] * x_k_r[0][0] + Ad[0][1] * x_k_r[0][1] + Bd[0][0] * counts_r_;
-  x_kn[0][1] = Ad[1][0] * x_k_l[0][0] + Ad[1][1] * x_k_l[0][1] + Bd[0][1] * counts_l_;
-  x_kn[0][1] = Ad[1][0] * x_k_r[0][0] + Ad[1][1] * x_k_r[0][1] + Bd[0][1] * counts_r_;
-  counts_lowpassed_l_ = Cd[0] * x_k_l[0][0] + Cd[1] * x_k_l[0][1] + Dd * counts_l_;
-  counts_lowpassed_r_ = Cd[0] * x_k_r[0][0] + Cd[1] * x_k_r[0][1] + Dd * counts_r_;
+void MotorIo::LowPass(){
+  x_k_l[0][0] = x_kn_l[0][0];
+  x_k_l[1][0] = x_kn_l[1][0];
+  x_k_r[0][0] = x_kn_r[0][0];
+  x_k_r[1][0] = x_kn_r[1][0];
+  x_kn_l[0][0] = Ad[0][0] * x_k_l[0][0] + Ad[0][1] * x_k_l[1][0] + Bd[0][0] * counts_l_;
+  x_kn_r[0][0] = Ad[0][0] * x_k_r[0][0] + Ad[0][1] * x_k_r[1][0] + Bd[0][0] * counts_r_;
+  x_kn_l[0][1] = Ad[1][0] * x_k_l[0][0] + Ad[1][1] * x_k_l[1][0] + Bd[1][0] * counts_l_;
+  x_kn_r[0][1] = Ad[1][0] * x_k_r[0][0] + Ad[1][1] * x_k_r[1][0] + Bd[1][0] * counts_r_;
+  counts_lowpassed_l_ = Cd[0] * x_k_l[0][0] + Cd[1] * x_k_l[1][0] + Dd * counts_l_;
+  counts_lowpassed_r_ = Cd[0] * x_k_r[0][0] + Cd[1] * x_k_r[1][0] + Dd * counts_r_;
 }
 /////////////////lowpass/////////////////
+
+/////////////////save data/////////////////
+void MotorIo::SaveData(){
+  char str [256];
+  char file_name[64];
+  FILE* fp;
+
+  int i = 1;
+  while(true){
+    snprintf(file_name,sizeof(char)*64,"bonusgetter/data/comparison_lowpass%i.csv",i);
+
+    if(fp = fopen(file_name,"r")){
+      fclose(fp);
+    } else {
+      break;
+    }
+    i++;
+  }
+
+  fp = fopen(file_name, "w");
+  sprintf(str, "motor_l ,motar_r ,motor_l_lowpass ,motor_r_lowpass\n");
+  fprintf(fp, str);
+  for (int i = 0; i < index;  i++) {
+    sprintf(str,"%d, %d, %f, %f\n",now_angle[0][i],now_angle[1][i],lowpass_angle[0][i],lowpass_angle[1][i]);
+    fprintf(fp, str);
+  }
+
+  fclose(fp);
+}
+/////////////////save data/////////////////
 
 SensorIo::SensorIo()
     : enter_button_pressed_(false), color_rgb_raw_({0, 0, 0}) {

@@ -26,7 +26,8 @@ class BasicDriver {
   void Run();
   void Stop();
   void Lowpass();
-  void PidControlVelocity(int8_t* power_l ,int8_t* power_r);
+  void PidControlVelocity();
+  void SavePidData();
 
  private:
   WheelsControl* wheels_control_;
@@ -35,6 +36,9 @@ class BasicDriver {
 
   float counts_l_now = 0;
   float counts_r_now = 0;
+
+  int8_t power_l;
+  int8_t power_r;
 
   /////////////////PIDcontrol/////////////////
   float counts_l_last = 0;
@@ -54,6 +58,14 @@ class BasicDriver {
   float error_differential_r = 0;
   float gain_velocity_control[2][3] = {{0.05, 0, 0}, {0.05, 0, 0}};
   /////////////////PIDcontrol/////////////////
+  
+  /////////////////save data/////////////////
+  float motor[2][100000] = {};
+  float velocity[2][100000] = {};
+  float error[2][100000] = {};
+  int motorpower[2][100000] = {};
+  int index = 0;
+  /////////////////save data/////////////////
 };
 
 class LineTracer {

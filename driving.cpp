@@ -41,8 +41,6 @@ void BasicDriver::SetParam(Move move_type, int8_t base_power) {
 }
 
 void BasicDriver::Run() {
-  int8_t power_l;
-  int8_t power_r;
   counts_l_last = counts_l_now;
   counts_r_last = counts_r_now;
   counts_l_now = wheels_control_ -> counts_lowpassed_l__;
@@ -54,7 +52,7 @@ void BasicDriver::Run() {
   if (move_type_ == kGoForward) {
     velocity_target_l = 720;
     velocity_target_r = 720;
-    PidControlVelocity(&power_l ,&power_r);
+    PidControlVelocity();
   } else if (move_type_ == kGoBackward) {
     power_l = power_r = -base_power_;
   } else if (move_type_ == kRotateLeft) {
@@ -68,13 +66,26 @@ void BasicDriver::Run() {
   }
 
   wheels_control_->Exec(power_l, power_r);
+
+  /////////////////save data/////////////////
+  motor[0][index] = counts_l_now;
+  motor[1][index] = counts_r_now;
+  velocity[0][index] = velocity_l;
+  velocity[1][index] = velocity_r;
+  error[0][index] = error_l;
+  error[1][index] = error_r;
+  motorpower[0][index] = power_l;
+  motorpower[1][index] = power_r;
+  index ++;
+  /////////////////save data/////////////////
 }
 
 void BasicDriver::Stop() {
   wheels_control_->Exec(0, 0);
 }
 
-void BasicDriver::PidControlVelocity(int8_t* power_l ,int8_t* power_r){
+/////////////////PIDcontrol/////////////////
+void BasicDriver::PidControlVelocity(){
   error_last_l = error_l;
   error_last_r = error_r;
   error_l = velocity_target_l - velocity_l;
@@ -84,20 +95,51 @@ void BasicDriver::PidControlVelocity(int8_t* power_l ,int8_t* power_r){
   error_differential_l = (error_l - error_integral_l) / delta_time;
   error_differential_r = (error_r - error_integral_r) / delta_time;
 
-  *power_l = (int)(gain_velocity_control[0][0] * error_l + gain_velocity_control[0][1] * error_integral_l + gain_velocity_control[0][2] * error_differential_l);
-  *power_l = (int)(gain_velocity_control[1][0] * error_r + gain_velocity_control[1][1] * error_integral_r + gain_velocity_control[1][2] * error_differential_r);
+  power_l = (int)(gain_velocity_control[0][0] * error_l + gain_velocity_control[0][1] * error_integral_l + gain_velocity_control[0][2] * error_differential_l);
+  power_r = (int)(gain_velocity_control[1][0] * error_r + gain_velocity_control[1][1] * error_integral_r + gain_velocity_control[1][2] * error_differential_r);
 
-  if(*power_l > 100){
-    *power_l = 100;
-  }else if(*power_l < -100){
-    *power_l = -100;
+  if(power_l > 100){
+    power_l = 100;
+  }else if(power_l < -100){
+    power_l = -100;
   }
-  if(*power_r > 100){
-    *power_r = 100;
-  }else if(*power_r < -100){
-    *power_r = -100;
+  if(power_r > 100){
+    power_r = 100;
+  }else if(power_r < -100){
+    power_r = -100;
   }
 }
+/////////////////PIDcontrol/////////////////
+
+/////////////////save data/////////////////
+void BasicDriver::SavePidData(){
+char str [256];
+  char file_name[64];
+  FILE* fp;
+
+  int i = 1;
+  while(true){
+    snprintf(file_name,sizeof(char)*64,"bonusgetter/data/comparison_pid%i.csv",i);
+
+    if(fp = fopen(file_name,"r")){
+      fclose(fp);
+    } else {
+      break;
+    }
+    i++;
+  }
+
+  fp = fopen(file_name, "w");
+  sprintf(str, "counts_l_now ,velocity_l ,error_l ,motorpower_l ,counts_r_now ,velocity_r ,error_r ,motorpower_r\n");
+  fprintf(fp, str);
+  for (int i = 0; i < index;  i++) {
+    sprintf(str,"%f,%f,%f,%d,%f,%f,%f,%d\n",motor[0][index],velocity[0][i],error[0][i],motorpower[0][i],motor[1][index],velocity[1][i],error[1][i],motorpower[1][i]);
+    fprintf(fp, str);
+  }
+
+  fclose(fp);
+}
+/////////////////save data/////////////////
 
 LineTracer::LineTracer(WheelsControl* wheels_control, Luminous* luminous)
     : wheels_control_(wheels_control), luminous_(luminous),
@@ -144,12 +186,12 @@ void EndCondition::SetParam(End end_type, Color end_color, float end_threshold) 
   end_threshold_ = end_threshold;
   end_state_ = false;
 
-  if (end_type_ == kDistanceEnd) {
+  if(end_type_ == kDistanceEnd){
     ref_distance_ = localize_->distance_;
   }
-  // } else if (end_type_ == kThetaEnd) {
-  //   ref_theta_ = localize_->pose_.theta;
-  // }
+  //}else if(end_type_ == kThetaEnd){
+  //  ref_theta_ = localize_->pose_.theta;
+  //}
 }
 
 bool EndCondition::IsSatisfied() {
@@ -159,19 +201,19 @@ bool EndCondition::IsSatisfied() {
         end_state_ = true;
       break;
 
-    // case kDistanceEnd:
-    //   if (end_threshold_ > 0 && localize_->distance_ - ref_distance_ > end_threshold_)
-    //     end_state_ = true;
-    //   else if (end_threshold_ < 0 && localize_->distance_ - ref_distance_ < end_threshold_)
-    //     end_state_ = true;
-    //   break;
+    case kDistanceEnd:
+      if (end_threshold_ > 0 && localize_->distance_ - ref_distance_ > end_threshold_)
+        end_state_ = true;
+      else if (end_threshold_ < 0 && localize_->distance_ - ref_distance_ < end_threshold_)
+        end_state_ = true;
+      break;
 
-    // case kThetaEnd:
-    //   if (end_threshold_ > 0 && localize_->pose_.theta - ref_theta_ > end_threshold_)
-    //     end_state_ = true;
-    //   else if (end_threshold_ < 0 && localize_->pose_.theta - ref_theta_ < end_threshold_)
-    //     end_state_ = true;
-    //   break;
+    //case kThetaEnd:
+    //  if (end_threshold_ > 0 && localize_->pose_.theta - ref_theta_ > end_threshold_)
+    //    end_state_ = true;
+    //  else if (end_threshold_ < 0 && localize_->pose_.theta - ref_theta_ < end_threshold_)
+    //    end_state_ = true;
+    //  break;
 
     default:
       break;
