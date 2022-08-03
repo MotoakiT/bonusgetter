@@ -1,4 +1,5 @@
 #include "driving.h"
+#include "ctime"
 
 WheelsControl::WheelsControl(MotorIo* motor_io) : motor_io_(motor_io) {
   counts_lowpassed_l__ = motor_io -> counts_lowpassed_l_;
@@ -117,19 +118,12 @@ char str [256];
   char file_name[64];
   FILE* fp;
 
-  int i = 1;
-  while(true){
-    snprintf(file_name,sizeof(char)*64,"bonusgetter/data/comparison_pid%i.csv",i);
+  time_t timer = time(NULL);
+  struct tm* t = localtime(&timer);
 
-    if(fp = fopen(file_name,"r")){
-      fclose(fp);
-    } else {
-      break;
-    }
-    i++;
-  }
-
+  sprintf(file_name, "bonusgetter/data/comparison_pid (%d月%d日%d:%d:%d).csv", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
   fp = fopen(file_name, "w");
+
   sprintf(str, "counts_l_now ,velocity_l ,error_l ,motorpower_l ,counts_r_now ,velocity_r ,error_r ,motorpower_r\n");
   fprintf(fp, str);
   for (int i = 0; i < index;  i++) {

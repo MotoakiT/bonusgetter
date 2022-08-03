@@ -1,5 +1,6 @@
 #include "device_io.h"
 #include <stdio.h>
+#include "ctime"
 
 MotorIo::MotorIo() : counts_l_(0), counts_r_(0) {
   ev3_motor_config(EV3_PORT_A, LARGE_MOTOR);
@@ -93,18 +94,10 @@ void MotorIo::SaveData(){
   char file_name[64];
   FILE* fp;
 
-  int i = 1;
-  while(true){
-    snprintf(file_name,sizeof(char)*64,"bonusgetter/data/comparison_lowpass%i.csv",i);
+  time_t timer = time(NULL);
+  struct tm* t = localtime(&timer);
 
-    if(fp = fopen(file_name,"r")){
-      fclose(fp);
-    } else {
-      break;
-    }
-    i++;
-  }
-
+  sprintf(file_name, "bonusgetter/data/comparison_lowpass (%d月%d日%d:%d:%d).csv", t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
   fp = fopen(file_name, "w");
   sprintf(str, "motor_l ,motar_r ,motor_l_lowpass ,motor_r_lowpass\n");
   fprintf(fp, str);
